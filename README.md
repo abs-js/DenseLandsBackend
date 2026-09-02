@@ -1,46 +1,27 @@
-# DenseLands Online — 1ª tentativa (localhost)
+# DenseLands Backend
 
-Não usei a API do jogo de tiro / futebol porque **os dois servidores atuais não têm banco**:
-- `abs-js/shot-game` — Socket.IO, tudo na memória
-- `abs-js/websocket` — School Soccer WS, rating também na memória
+Servidor Node + WebSocket do DenseLands.
 
-Aqui o “DB” é o arquivo `data/db.json` (contas, salas, mapa, reports). Depois dá para trocar por Postgres sem mudar o protocolo HTTP/WS.
-
-## Subir
+## Local
 
 ```bash
-cd denselands-server
 npm install
 node server.js
 ```
 
-Abra **http://localhost:8787** em dois navegadores (ou uma aba anônima).
+Abre http://localhost:8787
 
-## O que já funciona
+## Deploy (Render / Railway / Koyeb)
 
-- Criar conta / entrar
-- Criar sala (quem cria é **admin**) com chave e senha opcional
-- Entrar pela lista ou pela chave
-- Chat
-- PvP (Z no outro jogador) + mensagem de queda + respawn
-- Mapa da sala gravado no DB (`rooms[key].map.chunks`)
-- Reports para o admin
+Se o **primeiro deploy** rodou com o repositório ainda vazio, a plataforma trava o botão "Retry" às vezes.
 
-### Jogador
-- `/filter nome` — para de ver o chat dessa pessoa
-- `/report nome codigo` — códigos:
-  1 regras · 2 cheating · 3 tóxico · 4 scam · 5 construções · 6 outro  
-  No **4 (scam)** o aviso é: *você deve se responsabilizar pelo que perdeu. Embora isso, o admin recebeu este aviso e ele decidirá*
+Jeito certo:
 
-### Admin da sala
-- `/tp jogador`
-- `/ban jogador` (repete para desbanir)
-- `/kick jogador`
-- `/players`
-- `/adm` — invencível + anda mais rápido (nesta 1ª fatia; atravessar blocos entra quando ligar no DenseLands.html)
+1. Confirme que `server.js`, `package.json` e `public/` estão no GitHub (já estão).
+2. Na plataforma, **não** use só Retry do deploy antigo.
+3. Faça um **Manual Deploy** da branch `main`, **ou** apague o serviço e crie outro apontando de novo para `abs-js/DenseLandsBackend`.
+4. Comando de start: `npm start` ou `node server.js`.
+5. A porta é `process.env.PORT` (a plataforma preenche sozinha).
 
-## Próximo passo
-
-Ligar este mesmo `ws://localhost:8787/ws` no `DenseLands.html` (posições, chunks, PvP e chat). O protocolo já está pronto:
-
-`auth → join → pos / hit / chat / chunk`
+Site estático do jogo (GitHub Pages):
+https://abs-js.github.io/DenseLands/
