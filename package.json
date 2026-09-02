@@ -1,0 +1,13 @@
+{
+  "name": "denselands-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DenseLands multiplayer — localhost first pass",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
