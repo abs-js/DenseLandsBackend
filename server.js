@@ -191,11 +191,11 @@ const server = http.createServer(async (req, res) => {
     const key = name.toLowerCase();
     if (db.users[key]) return json(res, 409, { error: "Esse nome já existe." });
     const salt = uid(8);
-    db.users[key] = { name, salt, hash: hashPass(pass, salt), createdAt: now(), bannedFrom: {} };
+    db.users[key] = { name, salt, hash: hashPass(pass, salt), createdAt: now(), bannedFrom: {}, xp: 0, level: 1, ach: {}, found: {} };
     const token = uid(16);
     db.sessions[token] = { user: key, at: now() };
     saveDb();
-    return json(res, 200, { token, name });
+    return json(res, 200, { token, name, xp: 0, level: 1, ach: {}, found: {} });
   }
 
   if (req.method === "POST" && req.url === "/api/login") {
@@ -206,7 +206,31 @@ const server = http.createServer(async (req, res) => {
     const token = uid(16);
     db.sessions[token] = { user: key, at: now() };
     saveDb();
-    return json(res, 200, { token, name: u.name });
+    u.xp = u.xp || 0; u.ach = u.ach || {}; u.found = u.found || {};
+    return json(res, 200, { token, name: u.name, xp: u.xp, level: u.level || 1, ach: u.ach, found: u.found });
+  }
+
+  if (req.method === "GET" && req.url === "/api/me") {
+    const auth = userFromAuth(req);
+    if (!auth) return json(res, 401, { error: "Entre na conta." });
+    const u = auth.user;
+    return json(res, 200, { name: u.name, xp: u.xp || 0, level: u.level || 1, ach: u.ach || {}, found: u.found || {} });
+  }
+
+  if (req.method === "POST" && req.url === "/api/profile") {
+    const auth = userFromAuth(req);
+    if (!auth) return json(res, 401, { error: "Entre na conta." });
+    const b = await readBody(req);
+    const u = auth.user;
+    u.ach = Object.assign({}, u.ach || {}, b.ach || {});
+    u.found = Object.assign({}, u.found || {}, b.found || {});
+    u.xp = Math.max(u.xp || 0, Number(b.xp) || 0);
+    let lv = 1, left = u.xp;
+    const need = (l) => 20 + Math.max(0, l - 1) * 15;
+    while (left >= need(lv) && lv < 99) { left -= need(lv); lv++; }
+    u.level = lv;
+    saveDb();
+    return json(res, 200, { name: u.name, xp: u.xp, level: u.level, ach: u.ach, found: u.found });
   }
 
   if (req.method === "GET" && req.url.startsWith("/api/rooms/")) {
@@ -261,6 +285,7 @@ function broadcast(roomKey, obj, except) {
 function roster(roomKey) {
   return peers(roomKey).map(([, s]) => ({
     name: s.name, x: s.x, y: s.y, hp: s.hp, admin: s.adminMode, dirx: s.dirx, diry: s.diry,
+    skin: s.skin, shirt: s.shirt, hair: s.hair,
   }));
 }
 
@@ -317,7 +342,7 @@ function handle(ws, s, msg) {
     room.lastOccupied = now();
     room.map.edits = compactEdits(room.map.edits || []);
     send(ws, { type: "joined", room: publicRoom(room), map: room.map, you: s.name, admin: room.admin === s.name, players: roster(key), noPvp: room.key === "3" || room.key === "4" });
-    broadcast(key, { type: "joinedPeer", player: { name: s.name, x: s.x, y: s.y, hp: s.hp } }, ws);
+    broadcast(key, { type: "joinedPeer", player: { name: s.name, x: s.x, y: s.y, hp: s.hp, skin: s.skin, shirt: s.shirt, hair: s.hair } }, ws);
     broadcast(key, { type: "chat", from: "sistema", text: s.name + " entrou.", sys: true });
     return;
   }
@@ -335,7 +360,10 @@ function handle(ws, s, msg) {
     s.y = Number(msg.y) || 0;
     s.dirx = Number(msg.dirx) || 0;
     s.diry = Number(msg.diry) || 1;
-    broadcast(s.roomKey, { type: "pos", name: s.name, x: s.x, y: s.y, dirx: s.dirx, diry: s.diry, hp: s.hp, admin: s.adminMode }, ws);
+    s.skin = msg.skin || s.skin;
+    s.shirt = msg.shirt || s.shirt;
+    s.hair = msg.hair || s.hair;
+    broadcast(s.roomKey, { type: "pos", name: s.name, x: s.x, y: s.y, dirx: s.dirx, diry: s.diry, hp: s.hp, admin: s.adminMode, skin: s.skin, shirt: s.shirt, hair: s.hair }, ws);
     return;
   }
 
